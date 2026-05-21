@@ -9,7 +9,6 @@ const CORS_HEADERS = {
 };
 
 export default async function handler(req, res) {
-  // CORS preflight
   if (req.method === 'OPTIONS') {
     res.writeHead(204, CORS_HEADERS);
     return res.end();
@@ -21,7 +20,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { imageBase64, stylePrompt, styleName } = req.body;
+    // Vercel zero-config does not auto-parse the body — read the stream manually
+    let body = req.body;
+    if (typeof body !== 'object' || body === null) {
+      const raw = await readStream(req);
+      body = JSON.parse(raw);
+    }
+
+    const { imageBase64, stylePrompt, styleName } = body;
 
     if (!imageBase64 || !stylePrompt) {
       res.writeHead(400, { ...CORS_HEADERS, 'Content-Type': 'application/json' });
@@ -46,7 +52,7 @@ export default async function handler(req, res) {
             },
             {
               type: 'text',
-              text: 'Describe this person\'s key facial features in 2-3 sentences for an anime artist: hair color and style, eye color and shape, skin tone, distinctive features, approximate age, and gender expression. Be concise and specific.',
+              text: "Describe this person's key facial features in 2-3 sentences for an anime artist: hair color and style, eye color and shape, skin tone, distinctive features, approximate age, and gender expression. Be concise and specific.",
             },
           ],
         },
@@ -55,16 +61,9 @@ export default async function handler(req, res) {
 
     const description = visionResponse.content[0].text;
 
-    // Step 2: Build image prompt and call Pollinations
+    // Step 2: Build prompt and return Pollinations image URL
     const imagePrompt = buildImagePrompt(description, stylePrompt, styleName);
     const imageUrl = buildPollinationsUrl(imagePrompt);
-
-    // Warm up the image by fetching headers (optional, ensures it's cached)
-    try {
-      await fetch(imageUrl, { method: 'HEAD' });
-    } catch (_) {
-      // Non-blocking — the URL still works
-    }
 
     res.writeHead(200, { ...CORS_HEADERS, 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ imageUrl, description }));
@@ -74,6 +73,15 @@ export default async function handler(req, res) {
     res.writeHead(status, { ...CORS_HEADERS, 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: err.message || 'Internal server error' }));
   }
+}
+
+function readStream(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', chunk => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
 }
 
 function buildImagePrompt(description, stylePrompt, styleName) {
@@ -89,16 +97,14 @@ function buildImagePrompt(description, stylePrompt, styleName) {
 function buildPollinationsUrl(prompt) {
   const encoded = encodeURIComponent(prompt);
   const seed = Math.floor(Math.random() * 999999);
-  // Pollinations free tier — no API key needed unless using premium models
   return `https://image.pollinations.ai/prompt/${encoded}?width=512&height=512&seed=${seed}&nologo=true&model=flux`;
 }
 
 function detectMediaType(base64) {
-  // Detect from base64 header signature
   const header = base64.substring(0, 8);
   if (header.startsWith('/9j/')) return 'image/jpeg';
   if (header.startsWith('iVBORw0')) return 'image/png';
   if (header.startsWith('R0lGOD')) return 'image/gif';
   if (header.startsWith('UklGR')) return 'image/webp';
-  return 'image/jpeg'; // default fallback
+  return 'image/jpeg';
 }
