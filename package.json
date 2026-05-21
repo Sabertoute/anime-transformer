@@ -1,0 +1,21 @@
+{
+  "name": "anime-transformer",
+  "version": "1.0.0",
+  "description": "Transform photos into anime-style illustrations using Claude AI + Pollinations",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.3"
+  },
+  "devDependencies": {
+    "vercel": "^39.0.0"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel deploy",
+    "deploy:prod": "vercel deploy --prod"
+  }
+}

@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anime Transformer ✨</title>
+  <style>
+    :root {
+      --bg: #0d0d1a;
+      --surface: #161628;
+      --border: #2a2a4a;
+      --accent: #7c3aed;
+      --accent2: #ec4899;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      text-align: center;
+      padding: 40px 20px 20px;
+      background: linear-gradient(135deg, #0d0d1a 0%, #1a0d2e 100%);
+    }
+
+    header h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      background: linear-gradient(135deg, #a78bfa, #ec4899, #f97316);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 900;
+      letter-spacing: -1px;
+    }
+
+    header p {
+      color: var(--muted);
+      margin-top: 8px;
+      font-size: 1.1rem;
+    }
+
+    main {
+      flex: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+      width: 100%;
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: var(--surface);
+      position: relative;
+    }
+
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: #1e1a3a;
+    }
+
+    .upload-zone svg {
+      width: 48px;
+      height: 48px;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .upload-zone h2 {
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+    }
+
+    .upload-zone p {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    #fileInput {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .preview-thumb {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 12px;
+      margin: 16px auto 0;
+      display: block;
+      border: 2px solid var(--accent);
+    }
+
+    .styles-section {
+      margin: 32px 0;
+    }
+
+    .styles-section h2 {
+      font-size: 1.1rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+    }
+
+    .styles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 12px;
+    }
+
+    .style-card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      user-select: none;
+    }
+
+    .style-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .style-card.selected {
+      border-color: var(--accent2);
+      background: #2a1040;
+      box-shadow: 0 0 20px rgba(236, 72, 153, 0.2);
+    }
+
+    .style-card .emoji {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .style-card .name {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .transform-btn {
+      width: 100%;
+      padding: 18px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: var(--radius);
+      color: white;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      letter-spacing: 0.5px;
+      margin-top: 8px;
+    }
+
+    .transform-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(124, 58, 237, 0.4);
+    }
+
+    .transform-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .status-msg {
+      text-align: center;
+      padding: 16px;
+      border-radius: 12px;
+      margin-top: 20px;
+      font-size: 0.95rem;
+      display: none;
+    }
+
+    .status-msg.loading {
+      display: block;
+      background: #1e1a3a;
+      border: 1px solid var(--accent);
+      color: #a78bfa;
+    }
+
+    .status-msg.error {
+      display: block;
+      background: #2a0a0a;
+      border: 1px solid #ef4444;
+      color: #fca5a5;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(167, 139, 250, 0.3);
+      border-top-color: #a78bfa;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .result-section {
+      margin-top: 40px;
+      display: none;
+    }
+
+    .result-section.visible { display: block; }
+
+    .result-section h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 640px) {
+      .comparison { grid-template-columns: 1fr; }
+    }
+
+    .img-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .img-card .label {
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .img-card img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      display: block;
+    }
+
+    .description-box {
+      margin-top: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .description-box h3 {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    .description-box p {
+      line-height: 1.7;
+      color: #c4b5fd;
+    }
+
+    .action-btns {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      padding: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      background: #1e1a3a;
+    }
+
+    .btn-download {
+      flex: 1;
+      padding: 14px;
+      background: linear-gradient(135deg, #059669, #10b981);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      text-align: center;
+    }
+
+    .btn-download:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>✨ Anime Transformer</h1>
+    <p>Transforme ta photo en personnage anime avec l'IA</p>
+  </header>
+
+  <main>
+    <!-- Upload -->
+    <div class="upload-zone" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*" />
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+      <h2>Glisse ta photo ici</h2>
+      <p>ou clique pour choisir · JPG, PNG, WEBP</p>
+      <img id="previewThumb" class="preview-thumb" style="display:none" alt="preview" />
+    </div>
+
+    <!-- Style selector -->
+    <div class="styles-section">
+      <h2>Choisis ton style</h2>
+      <div class="styles-grid" id="stylesGrid"></div>
+    </div>
+
+    <!-- Action -->
+    <button class="transform-btn" id="transformBtn" disabled>
+      Transformer ✨
+    </button>
+
+    <div class="status-msg" id="statusMsg"></div>
+
+    <!-- Result -->
+    <div class="result-section" id="resultSection">
+      <h2>Résultat</h2>
+      <div class="comparison">
+        <div class="img-card">
+          <div class="label">Photo originale</div>
+          <img id="originalImg" alt="original" />
+        </div>
+        <div class="img-card">
+          <div class="label" id="styledLabel">Anime style</div>
+          <img id="animeImg" alt="anime result" />
+        </div>
+      </div>
+
+      <div class="description-box">
+        <h3>Description générée</h3>
+        <p id="descriptionText"></p>
+      </div>
+
+      <div class="action-btns">
+        <button class="btn-secondary" id="regenBtn">🔄 Regénérer</button>
+        <a class="btn-download" id="downloadBtn" href="#" download="anime-transform.png">
+          ⬇️ Télécharger
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const STYLES = [
+      { name: 'Ghibli',        emoji: '🌿', prompt: 'Studio Ghibli anime style, soft watercolor backgrounds, Miyazaki aesthetic, gentle expressive eyes, lush nature tones, hand-drawn warmth' },
+      { name: 'Shōnen',        emoji: '⚡', prompt: 'Shonen anime style, bold dynamic lines, spiky hair, intense determined expression, vibrant saturated colors, action energy, Naruto/Dragon Ball aesthetic' },
+      { name: 'Chibi',         emoji: '🎀', prompt: 'Chibi anime style, super deformed cute character, oversized head, tiny body, big sparkly eyes, pastel kawaii colors, adorable expression' },
+      { name: 'Cyberpunk',     emoji: '🔮', prompt: 'Cyberpunk anime style, neon lights, dark futuristic city, glowing cybernetic details, rain reflections, purple and cyan palette, Ghost in the Shell aesthetic' },
+      { name: 'Rétro 90s',     emoji: '📼', prompt: 'Retro 90s anime style, cel shading, limited palette, classic proportions, VHS aesthetic, Sailor Moon era, nostalgic grain texture' },
+      { name: 'Pixar',         emoji: '🎬', prompt: 'Pixar 3D animation style, expressive rounded features, subsurface skin scattering, warm lighting, charming personality, high quality render' },
+      { name: 'Dark Fantasy',  emoji: '🌑', prompt: 'Dark fantasy anime style, gothic atmosphere, detailed armor or robes, dramatic shadows, Berserk or Demon Slayer aesthetic, epic somber mood' },
+      { name: 'Cartoon Flat',  emoji: '🎨', prompt: 'Flat cartoon style, bold outlines, simple solid colors, minimal shading, clean geometric shapes, modern graphic novel aesthetic' },
+    ];
+
+    let selectedStyle = null;
+    let selectedFile = null;
+    let originalDataUrl = null;
+    let lastResult = null;
+
+    const stylesGrid = document.getElementById('stylesGrid');
+    const transformBtn = document.getElementById('transformBtn');
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    const statusMsg = document.getElementById('statusMsg');
+    const resultSection = document.getElementById('resultSection');
+    const originalImg = document.getElementById('originalImg');
+    const animeImg = document.getElementById('animeImg');
+    const descriptionText = document.getElementById('descriptionText');
+    const styledLabel = document.getElementById('styledLabel');
+    const regenBtn = document.getElementById('regenBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const previewThumb = document.getElementById('previewThumb');
+
+    // Build style cards
+    STYLES.forEach((style, i) => {
+      const card = document.createElement('div');
+      card.className = 'style-card';
+      card.innerHTML = `<span class="emoji">${style.emoji}</span><span class="name">${style.name}</span>`;
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.style-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedStyle = style;
+        updateBtn();
+      });
+      stylesGrid.appendChild(card);
+    });
+
+    function updateBtn() {
+      transformBtn.disabled = !(selectedFile && selectedStyle);
+    }
+
+    // File handling
+    fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      handleFile(e.dataTransfer.files[0]);
+    });
+
+    function handleFile(file) {
+      if (!file || !file.type.startsWith('image/')) return;
+      selectedFile = file;
+      const reader = new FileReader();
+      reader.onload = e => {
+        originalDataUrl = e.target.result;
+        previewThumb.src = originalDataUrl;
+        previewThumb.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+      updateBtn();
+    }
+
+    // Transform
+    transformBtn.addEventListener('click', doTransform);
+    regenBtn.addEventListener('click', doTransform);
+
+    async function doTransform() {
+      if (!selectedFile || !selectedStyle) return;
+
+      transformBtn.disabled = true;
+      regenBtn.disabled = true;
+      resultSection.classList.remove('visible');
+      showStatus('loading', '⏳ Analyse du visage en cours…');
+
+      try {
+        const base64 = originalDataUrl.split(',')[1];
+
+        const res = await fetch('/api/transform', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: base64,
+            stylePrompt: selectedStyle.prompt,
+            styleName: selectedStyle.name,
+          }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: 'Erreur serveur' }));
+          throw new Error(err.error || 'Erreur serveur');
+        }
+
+        const data = await res.json();
+        lastResult = data;
+
+        originalImg.src = originalDataUrl;
+        animeImg.src = data.imageUrl;
+        descriptionText.textContent = data.description;
+        styledLabel.textContent = `Style ${selectedStyle.name}`;
+
+        downloadBtn.href = data.imageUrl;
+        downloadBtn.download = `anime-${selectedStyle.name.toLowerCase()}.png`;
+
+        hideStatus();
+        resultSection.classList.add('visible');
+        resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (err) {
+        showStatus('error', '❌ ' + err.message);
+      } finally {
+        transformBtn.disabled = false;
+        regenBtn.disabled = false;
+        updateBtn();
+      }
+    }
+
+    function showStatus(type, msg) {
+      statusMsg.className = 'status-msg ' + type;
+      statusMsg.innerHTML = type === 'loading'
+        ? `<span class="spinner"></span>${msg}`
+        : msg;
+    }
+
+    function hideStatus() {
+      statusMsg.className = 'status-msg';
+      statusMsg.textContent = '';
+    }
+  </script>
+</body>
+</html>
