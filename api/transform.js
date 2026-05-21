@@ -61,12 +61,22 @@ export default async function handler(req, res) {
 
     const description = visionResponse.content[0].text;
 
-    // Step 2: Build prompt and return Pollinations image URL
+    // Step 2: Generate image via Pollinations and return as base64
     const imagePrompt = buildImagePrompt(description, stylePrompt, styleName);
-    const imageUrl = buildPollinationsUrl(imagePrompt);
+    const pollinationsUrl = buildPollinationsUrl(imagePrompt);
+
+    const imgResponse = await fetch(pollinationsUrl, {
+      signal: AbortSignal.timeout(50000),
+    });
+    if (!imgResponse.ok) {
+      throw new Error(`Pollinations returned ${imgResponse.status}`);
+    }
+    const imgBuffer = await imgResponse.arrayBuffer();
+    const contentType = imgResponse.headers.get('content-type') || 'image/png';
+    const imgBase64 = `data:${contentType};base64,${Buffer.from(imgBuffer).toString('base64')}`;
 
     res.writeHead(200, { ...CORS_HEADERS, 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ imageUrl, description }));
+    res.end(JSON.stringify({ imageBase64: imgBase64, description }));
   } catch (err) {
     console.error('[transform] Error:', err);
     const status = err.status || 500;

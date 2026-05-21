@@ -503,11 +503,11 @@
         lastResult = data;
 
         originalImg.src = originalDataUrl;
-        animeImg.src = data.imageUrl;
+        animeImg.src = data.imageBase64;
         descriptionText.textContent = data.description;
         styledLabel.textContent = `Style ${selectedStyle.name}`;
 
-        downloadBtn.href = data.imageUrl;
+        downloadBtn.href = data.imageBase64;
         downloadBtn.download = `anime-${selectedStyle.name.toLowerCase()}.png`;
 
         hideStatus();
